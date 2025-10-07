@@ -2,7 +2,7 @@ package org.upnext.apigateway.filters;
 
 
 import io.jsonwebtoken.Claims;
-import org.springframework.util.AntPathMatcher;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -10,28 +10,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
-import org.upnext.apigateway.configs.RouteRule;
-import org.upnext.apigateway.configs.SecurityPaths;
 import org.upnext.apigateway.utils.JwtUtils;
 import org.upnext.sharedlibrary.Dtos.UserDto;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.List;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 public class JwtAuthFilter implements GlobalFilter, Ordered {
     private final JwtUtils jwtUtils;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final SecurityPaths securityPaths;
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    JwtAuthFilter(JwtUtils jwtUtils, SecurityPaths securityPaths) {
+    JwtAuthFilter(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
-        this.securityPaths = securityPaths;
     }
 
 
@@ -42,7 +35,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String method = exchange.getRequest().getMethod().toString();
 
         // handle pages that does not need auth
-        if(valid(path, method, securityPaths.getPublicRoutes())){
+        if((path.startsWith("/products") || path.startsWith("/categories")) && method.equalsIgnoreCase("GET")){
             return chain.filter(exchange);
         }
 
@@ -56,12 +49,13 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         try{
             Claims claims =  jwtUtils.extractClaims(header);
             String role = (String) claims.get("role");
-
-            if(!valid(path, method, securityPaths.getUserRoutes()) && role.equalsIgnoreCase("USER")){
+            if(path.startsWith("/products") &&
+                    !method.equalsIgnoreCase("GET")&&
+                    !role.equalsIgnoreCase("ADMIN")){
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
-
             }
+            System.out.println("A7a");
             UserDto user = new UserDto(
                     ((Number) claims.get("id")).longValue(),
                     (String) claims.get("email"),
@@ -91,10 +85,5 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         return -1;
-    }
-
-    private boolean valid(String path, String method, List<RouteRule> rules) {
-        return rules.stream()
-                .anyMatch(rule -> pathMatcher.match(rule.getPath(), path) && rule.getMethods().contains(method));
     }
 }
