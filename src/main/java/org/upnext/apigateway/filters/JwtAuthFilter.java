@@ -9,6 +9,7 @@ import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import org.upnext.apigateway.utils.JwtUtils;
 import org.upnext.sharedlibrary.Dtos.UserDto;
@@ -16,16 +17,21 @@ import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 public class JwtAuthFilter implements GlobalFilter, Ordered {
     private final JwtUtils jwtUtils;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     JwtAuthFilter(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
     }
+
+    private final List<String> publicPaths = List.of("/products/**", "/categories/**");
 
 
     @Override
@@ -35,10 +41,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String method = exchange.getRequest().getMethod().toString();
 
         // handle pages that does not need auth
-        if((path.startsWith("/products") || path.startsWith("/categories")) && method.equalsIgnoreCase("GET")){
+        if(isPublicPath(path) && method.equalsIgnoreCase("GET")){
             return chain.filter(exchange);
         }
-
         String header  = exchange.getRequest().getHeaders().getFirst("Authorization");
 
         if (header == null || !header.startsWith("Bearer ")) {
@@ -55,7 +60,6 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
-            System.out.println("A7a");
             UserDto user = new UserDto(
                     ((Number) claims.get("id")).longValue(),
                     (String) claims.get("email"),
@@ -69,6 +73,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                     .header("X-User", encoded)
                     .build();
+            System.out.println(mutatedRequest.getHeaders().get("X-User"));
 
             System.out.println(userJson);
             System.out.println(user.toString());
@@ -82,6 +87,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
     }
 
+    private boolean isPublicPath(String path) {
+        return publicPaths.stream().anyMatch(p -> pathMatcher.match(p, path));
+    }
     @Override
     public int getOrder() {
         return -1;
