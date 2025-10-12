@@ -6,6 +6,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -31,7 +32,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         this.jwtUtils = jwtUtils;
     }
 
-    private final List<String> publicPaths = List.of("/products/**", "/categories/**");
+    private final List<String> publicPaths = List.of("/products/**", "/categories/**", "/auth/**");
 
 
     @Override
@@ -44,7 +45,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         if(isPublicPath(path) && method.equalsIgnoreCase("GET")){
             return chain.filter(exchange);
         }
-        String header  = exchange.getRequest().getHeaders().getFirst("Authorization");
+        String header  = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         if (header == null || !header.startsWith("Bearer ")) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
