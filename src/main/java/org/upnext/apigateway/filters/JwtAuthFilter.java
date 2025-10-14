@@ -1,11 +1,13 @@
 package org.upnext.apigateway.filters;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.jsonwebtoken.Claims;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -28,37 +30,49 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private final JwtUtils jwtUtils;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
+    private final List<String> publicPaths = List.of("/products/**", "/categories/**", "/auth/**", "/users/**");
     JwtAuthFilter(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
     }
 
-    private final List<String> publicPaths = List.of("/products/**", "/categories/**", "/auth/**");
-
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        System.out.println("Filtering JwtAuthFilter");
         String path = exchange.getRequest().getURI().getPath();
-
-        // handle pages that does not need auth
-        if(isPublicPath(path)){
+        if(isPublicPath(path)) {
             return chain.filter(exchange);
         }
-        String header  = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-
-        if (header == null || !header.startsWith("Bearer ")) {
+        String token = jwtUtils.getJwtFromHeader(exchange);
+        if (token == null || !jwtUtils.isValidToken(token)) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
+        Claims claims =  jwtUtils.extractAllClaims(token);
+        UserDto user = new UserDto(
+                ((Long) Long.parseLong(claims.get("sub").toString())),
+                (String) claims.get("email"),
+                (String) claims.get("phoneNumber"),
+                (String) claims.get("address"),
+                (List<String>) claims.get("role")
+        );
+        System.out.println(user);
+        ObjectMapper objectMapper = new ObjectMapper();
 
-        try{
-            jwtUtils.isValidToken(header);
-            return chain.filter(exchange);
-        }catch (Exception e){
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-
+        String userJson = null;
+        try {
+            userJson = objectMapper.writeValueAsString(user);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
+        String encoded = Base64.getEncoder()
+                .encodeToString(userJson.getBytes(StandardCharsets.UTF_8));
+
+        ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+                .header("X-User", encoded)
+                .build();
+
+        return chain.filter(exchange.mutate().request(mutatedRequest).build());
+
     }
 
     private boolean isPublicPath(String path) {

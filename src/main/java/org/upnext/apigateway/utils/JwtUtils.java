@@ -3,10 +3,11 @@ package org.upnext.apigateway.utils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpCookie;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ServerWebExchange;
+
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -17,16 +18,13 @@ import java.util.function.Function;
 public class JwtUtils {
     @Value("${jwt.secret.key}")
     private String secretKey;
-    @Value("${jwt.expiration}")
-
-
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    private  Claims extractAllClaims(String token) {
+    public  Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
@@ -47,16 +45,14 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String getJwtFromHeader(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if(cookies != null) {
-            return Arrays.stream(cookies)
-                    .filter(cookie -> cookie.getName().equals("jwt"))
-                    .map(Cookie::getValue)
-                    .findFirst().orElse(null);
+    public String getJwtFromHeader(ServerWebExchange exchange) {
+        HttpCookie cookie = exchange.getRequest().getCookies().getFirst("jwt");
+        if (cookie != null) {
+            return cookie.getValue();
         }
         return null;
     }
+
     public boolean isValidToken(String token) {
         extractAllClaims(token);
         return !isTokenExpired(token);
