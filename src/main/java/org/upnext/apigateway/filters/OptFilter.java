@@ -1,47 +1,36 @@
 package org.upnext.apigateway.filters;
 
-
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.GatewayFilterChain;
-import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.util.AntPathMatcher;
-import org.springframework.web.server.ServerWebExchange;
 import org.upnext.apigateway.utils.JwtUtils;
 import org.upnext.sharedlibrary.Dtos.UserDto;
-import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 @Component
-public class JwtAuthFilter extends AbstractGatewayFilterFactory implements  Ordered {
+public class OptFilter extends AbstractGatewayFilterFactory<Object> {
     private final JwtUtils jwtUtils;
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
-    JwtAuthFilter(JwtUtils jwtUtils) {
+
+    OptFilter(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
     }
-
 
     @Override
     public GatewayFilter apply(Object config) {
         return (exchange, chain) -> {
             String token = jwtUtils.getJwtFromHeader(exchange);
             if (token == null || !jwtUtils.isValidToken(token)) {
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
+                return chain.filter(exchange);
             }
-            try{
-                Claims claims =  jwtUtils.extractAllClaims(token);
+            try {
+                Claims claims = jwtUtils.extractAllClaims(token);
                 UserDto user = new UserDto(
                         ((Long) Long.parseLong(claims.get("sub").toString())),
                         (String) claims.get("email"),
@@ -63,18 +52,11 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory implements  Orde
                         .build();
                 System.out.println(encoded);
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());
-            }catch (Exception e){
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
+            } catch (Exception e) {
+                return chain.filter(exchange);
             }
 
         };
     }
-
-    @Override
-    public int getOrder() {
-        return -1;
-    }
-
 
 }
