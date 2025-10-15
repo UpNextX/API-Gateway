@@ -31,13 +31,8 @@ public class OptFilter extends AbstractGatewayFilterFactory<Object> {
             }
             try {
                 Claims claims = jwtUtils.extractAllClaims(token);
-                UserDto user = new UserDto(
-                        ((Long) Long.parseLong(claims.get("sub").toString())),
-                        (String) claims.get("email"),
-                        (String) claims.get("phoneNumber"),
-                        (String) claims.get("address"),
-                        (List<String>) claims.get("role")
-                );
+                UserDto user = jwtUtils.getUserDto(claims);
+
                 System.out.println(token);
                 System.out.println(user);
                 ObjectMapper objectMapper = new ObjectMapper();

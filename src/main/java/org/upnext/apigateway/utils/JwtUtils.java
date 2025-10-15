@@ -7,11 +7,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpCookie;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerWebExchange;
+import org.upnext.sharedlibrary.Dtos.UserDto;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.function.Function;
 
 @Service
@@ -56,6 +58,18 @@ public class JwtUtils {
     public boolean isValidToken(String token) {
         extractAllClaims(token);
         return !isTokenExpired(token);
+    }
+
+    public UserDto getUserDto(Claims claims) {
+        return new UserDto(
+                ((Long) Long.parseLong(claims.get("sub").toString())),
+                (String) claims.get("name"),
+                (String) claims.get("email"),
+                (String) claims.get("phoneNumber"),
+                (String) claims.get("address"),
+                (List<String>) claims.get("role")
+        );
+
     }
 }
 
