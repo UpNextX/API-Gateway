@@ -3,6 +3,9 @@ package org.upnext.apigateway.filters;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -24,8 +27,12 @@ import java.util.List;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
+@Slf4j
 public class JwtAuthFilter extends AbstractGatewayFilterFactory implements  Ordered {
     private final JwtUtils jwtUtils;
+
+    Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
+
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     JwtAuthFilter(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
@@ -34,6 +41,7 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory implements  Orde
 
     @Override
     public GatewayFilter apply(Object config) {
+        logger.debug("JwtAuthFilter apply");
         return (exchange, chain) -> {
             String token = jwtUtils.getJwtFromHeader(exchange);
             if (token == null || !jwtUtils.isValidToken(token)) {
