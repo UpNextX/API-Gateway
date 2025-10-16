@@ -2,6 +2,9 @@ package org.upnext.apigateway.filters;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpStatus;
@@ -15,8 +18,10 @@ import java.util.Base64;
 import java.util.List;
 
 @Component
+@Slf4j
 public class OptFilter extends AbstractGatewayFilterFactory<Object> {
     private final JwtUtils jwtUtils;
+    Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
 
     OptFilter(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
@@ -24,6 +29,7 @@ public class OptFilter extends AbstractGatewayFilterFactory<Object> {
 
     @Override
     public GatewayFilter apply(Object config) {
+        logger.info("Optional Filter ");
         return (exchange, chain) -> {
             String token = jwtUtils.getJwtFromHeader(exchange);
             if (token == null || !jwtUtils.isValidToken(token)) {

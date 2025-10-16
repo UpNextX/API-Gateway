@@ -2,6 +2,9 @@ package org.upnext.apigateway.filters;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpStatus;
@@ -13,8 +16,10 @@ import java.util.Base64;
 import java.util.List;
 
 @Component
+@Slf4j
 public class JwtAdminFilter extends AbstractGatewayFilterFactory {
     private final ObjectMapper objectMapper;
+    Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
 
     public JwtAdminFilter(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -22,6 +27,7 @@ public class JwtAdminFilter extends AbstractGatewayFilterFactory {
 
     @Override
     public GatewayFilter apply(Object config) {
+        logger.info("JwtAdminFilter apply");
         return (exchange, chain) -> {
             String token = exchange.getRequest().getHeaders().getFirst("X-User");
             if (token == null) {

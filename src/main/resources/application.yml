@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: product-service-public
+              uri: lb://product-service
+              predicates:
+                - Path=/products/**,/categories/**,/brands/**
+
+            - id: cart-service
+              uri: lb://cart-service
+              predicates:
+                - Path=/carts/**
+              filters:
+                - name: JwtAuthFilter
+
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/orders/**
+              filters:
+                - name: JwtAuthFilter
+
+            - id: auth-service-auth
+              uri: lb://auth-service
+              predicates:
+                - Path=/auth/**
+              filters:
+                - name: OptFilter
+
+            - id: auth-service-users
+              uri: lb://auth-service
+              predicates:
+                - Path=/users/**
+              filters:
+                - name: JwtAuthFilter
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: "http://localhost:5500"
+                allowedMethods: "GET,POST,PUT,DELETE,OPTIONS"
+                allowedHeaders: "*"
+                allowCredentials: true
+                maxAge: 3600
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+
+jwt:
+  secret:
+    key: my_super_secret_key_1234567890_abcdefghij
