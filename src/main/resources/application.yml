@@ -10,7 +10,9 @@ spring:
             - id: product-service-public
               uri: lb://product-service
               predicates:
-                - Path=/products/**,/categories/**,/brands/**
+                - Path=/products/**,/categories/**,/brands/**,/gpus/**,/cpus/**,/motherboards/**,/pccases/**,/psus/**,/ramkits/**
+              filters:
+                - name: OptFilter
 
             - id: cart-service
               uri: lb://cart-service
@@ -25,6 +27,11 @@ spring:
                 - Path=/orders/**
               filters:
                 - name: JwtAuthFilter
+
+            - id: order-service-payment
+              uri: lb://order-service
+              predicates:
+                - Path=/stripe/**
 
             - id: auth-service-auth
               uri: lb://auth-service
