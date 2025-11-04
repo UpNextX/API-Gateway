@@ -46,6 +46,40 @@ spring:
                 - Path=/users/**
               filters:
                 - name: JwtAuthFilter
+
+            - id: cart-service-docs
+              uri: lb://cart-service
+              predicates:
+                - Path=/cart-service/api-docs/**,/cart-service/swagger-ui/**
+              filters:
+                - RewritePath=/cart-service/api-docs(?<segment>.*), /api-docs$\{segment}
+                - RewritePath=/cart-service/swagger-ui(?<segment>.*), /swagger-ui$\{segment}
+
+            - id: auth-service-docs
+              uri: lb://auth-service
+              predicates:
+                - Path=/auth-service/api-docs/**,/auth-service/swagger-ui/**
+              filters:
+                - RewritePath=/auth-service/api-docs(?<segment>.*), /api-docs$\{segment}
+                - RewritePath=/auth-service/swagger-ui(?<segment>.*), /swagger-ui$\{segment}
+
+            - id: order-service-docs
+              uri: lb://order-service
+              predicates:
+                - Path=/order-service/api-docs/**,/order-service/swagger-ui/**
+              filters:
+                - RewritePath=/order-service/api-docs(?<segment>.*), /api-docs$\{segment}
+                - RewritePath=/order-service/swagger-ui(?<segment>.*), /swagger-ui$\{segment}
+
+            - id: product-service-docs
+              uri: lb://product-service
+              predicates:
+                - Path=/product-service/api-docs/**,/product-service/swagger-ui/**
+              filters:
+                - RewritePath=/product-service/api-docs(?<segment>.*), /api-docs$\{segment}
+                - RewritePath=/product-service/swagger-ui(?<segment>.*), /swagger-ui$\{segment}
+
+
           globalcors:
             cors-configurations:
               '[/**]':
@@ -60,6 +94,21 @@ spring:
                   - PUT
                   - DELETE
                 maxAge: 3600
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    urls:
+      - name: Cart Service
+        url: /cart-service/api-docs
+      - name: Auth Service
+        url: /auth-service/api-docs
+      - name: Order Service
+        url: /order-service/api-docs
+      - name: Product Service
+        url: /product-service/api-docs
 
 eureka:
   client:
